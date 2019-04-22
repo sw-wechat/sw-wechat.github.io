@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, maximum-scale=3.0, minimum-scale=1.0"/>
-    <title>微信网站微信中继...</title>
+    <title>守望微信网站</title>
     <link id="favicon" rel="icon" href="" type="image/gif" sizes="16x16">
     <style>
       #wechat_iframe {
@@ -63,11 +63,17 @@
       .website-title-extra {
         font-size: 14px;
       }
+
+      #featured {
+        overflow: hidden;
+        display: inline-block;
+      }
+
     </style>
   </head>
   <body>
-    <div id="wechat_img"><img id="featured" width="800" height="600"
-                              src=""/></div>
+    <div id="wechat_img"><img id="featured" width="1" height="1"
+                              src="./logo.png"/></div>
     <div id="wechat_summary">守望的微信网站跳转中……</div>
     <iframe id="wechat_iframe" height="100%" width="100%" src="">
     </iframe>
@@ -95,6 +101,8 @@
         var lastUrlPosted;
         var loc = location;
 
+        var isLocalHost = !!loc.hostname.match('localhost') || !!loc.hostname.match('127.0.0.1') ;
+
         var globalLoadingTimeout;
 
         var isConnected = false;
@@ -120,17 +128,18 @@
         var loadingIFrameEventName = 'loadingIFrame';
         var loadingIFrameEvent = new Event(loadingIFrameEventName);
 
-        var enforceProtocol = 'https://';
+        var enforceProtocol = isLocalHost ? 'http://' : 'https://';
 
         var repoNameAsWebsiteHost = loc.pathname.replace(/\//, '').split('/')[0];
 
         favicon.href = '/' + repoNameAsWebsiteHost + '/' + 'favicon.ico';
 
-        featured.src = '/' + repoNameAsWebsiteHost + '/' + 'banner.png';
+        // featured.src = '/' + repoNameAsWebsiteHost + '/' + 'banner.png';
 
+        setDocTitleFromURLOnInit();
         // convert old hastag style to HTML5 History style
         convertHasTagToHistoryState();
-        jumpOutOfIframeOnNoWechat();
+        //jumpOutOfIframeOnNoWechat();
 
         win.addEventListener('message', function(e) {
           var message = e.data;
@@ -198,25 +207,25 @@
             }
               break;
 
-            case 'beforeunload': {
-              showElement(unload);
-              websiteTitle.innerText = message.targetTitle;
-              var targetTitleExtra = message.targetTitleExtra;
-              websiteTitleExtra.innerText = getSEOArticleTitleFromUrl(targetTitleExtra);
-              // slideDownElement(loading);
-              slideDownElement(loading);
+            // case 'beforeunload': {
+            //   showElement(unload);
+            //   websiteTitle.innerText = message.targetTitle;
+            //   var targetTitleExtra = message.targetTitleExtra;
+            //   websiteTitleExtra.innerText = getSEOArticleTitleFromUrl(targetTitleExtra);
+            //   // slideDownElement(loading);
+            //   slideDownElement(loading);
 
-              reload(targetTitleExtra);
+            //   reload(targetTitleExtra);
 
-              setTimeout(function() {
-                loc.reload();
-              }, 200)
-            }
-              break;
+            //   setTimeout(function() {
+            //     loc.reload();
+            //   }, 200)
+            // }
+            //   break;
 
-            case 'unload': {
-              isConnected = false;
-            }
+            // case 'unload': {
+            //   isConnected = false;
+            // }
               break;
           }
 
@@ -232,24 +241,32 @@
 
         });
 
-        win.addEventListener('popstate', function(e) {
-          var iframeWin = iframe.contentWindow;
+        // win.addEventListener('popstate', function(e) {
+        //   var iframeWin = iframe.contentWindow;
 
-          if(!iframeWin) {
-            return;
-          }
+        //   if(!iframeWin) {
+        //     return;
+        //   }
 
-          iframeWin.postMessage({
-                                  type: 'updateIFrameUrlByState',
-                                  url: getIFrameUrl()
-                                }, '*');
-        }, false);
+        //   iframeWin.postMessage({
+        //                           type: 'updateIFrameUrlByState',
+        //                           url: getIFrameUrl()
+        //                         }, '*');
+        // }, false);
 
         function convertHasTagToHistoryState() {
           // https://OWNER.github.io/example.com/#https://www.example.com/a/b/c/--WC--Main
           // =>
           // www.example.com/a/b/c#Main
-          var iFrameUrlPart = decodeURI(loc.hash.replace(/^#/, '').replace(enforceProtocol, ''));
+          var iFrameUrlPart;
+          
+          try {
+            iFrameUrlPart = decodeURI(loc.hash.replace(/^#/, '').replace(enforceProtocol, ''));
+          } catch(e) {
+
+          } 
+
+          iFrameUrlPart = iFrameUrlPart || ''
 
           if(iFrameUrlPart.length > 3) {
             updateUrl(iFrameUrlPart)
@@ -263,16 +280,23 @@
         function updateUrl(iFrameUrlPart) {
           //iFrameUrlPart: www.example.com/a/b/c//--WC-Main
 
+          iFrameUrlPart = iFrameUrlPart || '/' + repoNameAsWebsiteHost + '/';
+
           var iframeWin = iframe.contentWindow;
 
           if(!iframeWin) {
             return;
           }
 
-          var iFrameUrl = '/' + repoNameAsWebsiteHost + '/' + iFrameUrlPart;
+          // var iFrameUrl = '/' + repoNameAsWebsiteHost + '/' + iFrameUrlPart;
+          var iFrameUrl = iFrameUrlPart;
 
           // handle hash tag
-          history.pushState({}, "", iFrameUrl);
+          //history.pushState({}, "", iFrameUrl);
+          // assert(iFrameUrl).toEqual('/username.github.io/2019/04/22/your_post_name')
+          
+
+          updateLocationPath(iFrameUrl);
 
           setTimeout(function() {
             var lastIFrameUrl = localStorage.getItem('lastIFrameUrl');
@@ -291,11 +315,25 @@
                  && IFrameUrlDateTime > firstConnectedTime + 7000
                  && lastIFrameUrlDateTime && (+lastIFrameUrlDateTime) + 3000 < IFrameUrlDateTime) {
 
-                loc.reload();
+                // loc.reload();
               }
 
             }
           }, 10)
+        }
+
+        function updateLocationPath(iFrameUrl) {
+
+          iFrameUrl = iFrameUrl || '';
+
+          if (!/^\//.test(iFrameUrl)) {
+            iFrameUrl = '/' + iFrameUrl;
+          }
+
+          if (location.pathname !== iFrameUrl) {
+            location.pathname = iFrameUrl
+          }
+
         }
 
         function updateIFrameByUrl() {
@@ -321,10 +359,12 @@
           // example.com/sub1.example.com/a/b/c/--WC--section1 => sub1.example.com/a/b/c/--WC--section1
           path = loc.pathname.replace(/^\//, '');
           // sub1.example.com/a/b/c/--WC--section1
-          iFrameUrlPart = path.replace(repoNameAsWebsiteHost, '');
+          // iFrameUrlPart = path.replace(repoNameAsWebsiteHost, '');
+          iFrameUrlPart = path;
 
           // downward compatible with github.com/OWNER/example.com -> www.example.com
-          var prefix = repoNameAsWebsiteHost.split('.').length > 2 ? enforceProtocol : enforceProtocol + 'www.';
+          // var prefix = repoNameAsWebsiteHost.split('.').length > 2 ? enforceProtocol : enforceProtocol + 'www.';
+          var prefix = enforceProtocol;
           var urlToJumpTo = prefix + repoNameAsWebsiteHost;
 
           if(iFrameUrlPart && iFrameUrlPart.length > 5) {
@@ -335,6 +375,23 @@
           }
 
           return urlToJumpTo;
+        }
+
+        function getDocTitleFromIFrameUrl() {
+          var iframeUrl = getIFrameUrl();
+          // remove tail '/'
+          iframeUrl = iframeUrl.replace(/\/$/, '');
+
+          var docTitle = iframeUrl.split('/').pop();
+          
+          docTitle = docTitle && decodeURIComponent(docTitle) || doc.title;
+
+          return docTitle;
+          
+        }
+
+        function setDocTitleFromURLOnInit() {
+          doc.title = getDocTitleFromIFrameUrl();
         }
 
         function updateLoading() {
@@ -392,18 +449,18 @@
           elem.style.opacity = 1;
         }
 
-        function reload(url) {
+        // function reload(url) {
 
-          if(url && url.length > 10) {
+        //   if(url && url.length > 10) {
 
-            // https://www.example.com/a/b/c/#Main
-            // =>
-            // www.example.com/a/b/c//--WC-Main
-            var iFrameUrlPart = url.replace(enforceProtocol, '').replace('#', hashPlaceholder);
+        //     // https://www.example.com/a/b/c/#Main
+        //     // =>
+        //     // www.example.com/a/b/c//--WC-Main
+        //     var iFrameUrlPart = url.replace(enforceProtocol, '').replace('#', hashPlaceholder);
 
-            updateUrl(iFrameUrlPart);
-          }
-        }
+        //     updateUrl(iFrameUrlPart);
+        //   }
+        // }
 
         function getSEOArticleTitleFromUrl(url) {
           url = url || '';
