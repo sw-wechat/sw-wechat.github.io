@@ -139,7 +139,7 @@
         setDocTitleFromURLOnInit();
         // convert old hastag style to HTML5 History style
         convertHasTagToHistoryState();
-        //jumpOutOfIframeOnNoWechat();
+        jumpOutOfIframeOnNoWechat();
 
         win.addEventListener('message', function(e) {
           var message = e.data;
